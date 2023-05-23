@@ -14,6 +14,7 @@ export interface LookerChartUtils {
     textForCell: (cell: Cell) => string
     filterableValueForCell: (cell: Cell) => string
     htmlForCell: (cell: Cell, context?: string, fieldDefinitionForCell?: any, customHtml?: string) => string
+    toggleCrossfilter: (props: any) => void
   }
 }
 /**
@@ -104,6 +105,7 @@ export interface VisUpdateDetails {
     queryResponse?: boolean
     size?: boolean
   }
+  crossfilterEnabled: boolean
 }
 
 export interface VisOption {

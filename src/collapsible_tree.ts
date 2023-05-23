@@ -6,9 +6,10 @@ import { handleErrors } from './utils'
 
 import { Row, Looker, Link, Cell, LookerChartUtils, VisualizationDefinition } from './types'
 import { callbackify } from 'util'
-// import { getEventListeners } from 'events'
-// import { type } from 'os'
+import { type } from 'os'
+import { text } from 'd3'
 declare var LookerCharts: LookerChartUtils
+var masterNode:any
 
 interface CollapsibleTreeVisualization extends VisualizationDefinition {
   svg?: any
@@ -36,6 +37,8 @@ function descend(obj: any, taxonomy: any[], depth: number = 0) {
 function burrow(table: any, taxonomy: any[], linkMap: Map<string, Cell | Link[] | undefined>, root_node_name: string) {
   // create nested object
   const obj: any = {}
+  // console.log('Log table: ', table)
+  // console.log('Log taxonomy: ', taxonomy)
 
   table.forEach((row: Row) => {
     // start at root
@@ -59,6 +62,8 @@ function burrow(table: any, taxonomy: any[], linkMap: Map<string, Cell | Link[] 
   }
 }
 
+console.log('DEBUG Before Viz constant declare')
+
 const vis: CollapsibleTreeVisualization = {
   id: 'collapsible_tree', // id/label not required, but nice for testing and keeping manifests in sync
   label: 'Collapsible Tree',
@@ -80,6 +85,30 @@ const vis: CollapsibleTreeVisualization = {
       default: 'Top Level',
       type: 'string',
       display: 'text'
+    },
+    rect_height: {
+      label: 'Box Height',
+      default: 30,
+      type: 'number',
+      display: 'text'
+    },
+    rect_width: {
+      label: 'Box Width',
+      default: 60,
+      type: 'number',
+      display: 'text'
+    },
+    rect_distance: {
+      label: 'Box Distance',
+      default: 45,
+      type: 'number',
+      display: 'text'
+    },
+    text_size: {
+      label: 'Text Size',
+      default: 10,
+      type: 'number',
+      display: 'text'
     }
   },
 
@@ -89,13 +118,18 @@ const vis: CollapsibleTreeVisualization = {
   },
 
   // Render in response to the data or settings changing
-  update(data, element, config, queryResponse) {
+  updateAsync(data, element, config, queryResponse, details, done) {
+    var firstPass = 1
+    console.log('Top Update of viz')
+    console.log('Log queryResponse: ', queryResponse)
+    console.log('Log data: ', data)
+    console.log('Log details:', details)
     if (
       !handleErrors(this, queryResponse, {
         min_pivots: 0,
         max_pivots: 0,
         min_dimensions: 2,
-        max_dimensions: undefined,
+        max_dimensions: 5,
         min_measures: 0,
         max_measures: undefined,
       })
@@ -109,11 +143,14 @@ const vis: CollapsibleTreeVisualization = {
     }
 
     // Changing circles to rectangles
-    var rectW = 60
-    var rectH = 30
+    const rectW = (config && config.rect_width) || this.options.rect_width.default
+    const rectH = (config && config.rect_height) || this.options.rect_height.default
+    const rectdist = (config && config.rect_distance) || this.options.rect_distance.default
 
-    const textSize = 10
-    const nodeRadius = 4
+    var tracker = 0
+
+    const textSize = (config && config.text_size) || this.options.text_size.default
+
     const duration = 750
     const margin = { top: 10, right: 10, bottom: 10, left: 10 }
     const width = element.clientWidth - margin.left - margin.right
@@ -128,15 +165,14 @@ const vis: CollapsibleTreeVisualization = {
       .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
 
     // declares a tree layout and assigns the size
-    // const treelayout = d3.tree().size([height, width])
     const treelayout = d3.tree().size([width, height])
-    // Assigns parent, children, height, depth
 
+    // Assigns parent, children, height, depth
     const rootNode: any = d3.hierarchy(nested, (d) => d.children)
-    // rootNode.x0 = height / 2
-    // rootNode.y0 = 0
     rootNode.x0 = 0
     rootNode.y0 = width / 2
+
+    masterNode = rootNode
 
     // define some helper functions that close over our local variables
 
@@ -172,16 +208,31 @@ const vis: CollapsibleTreeVisualization = {
       update(d)
     }
 
-    function clickHandler(element: HTMLElement) {
-      element.addEventListener('click', () => {
-        
-      })
+    // Launch the DrillMenu on Click
+    function layerdrill(event: any, d:any, _row: any ){
+      
+      // ****************  DEBUG  *******************
+      if (details?.crossfilterEnabled) {
+        LookerCharts.Utils.toggleCrossfilter({row: _row , event: event})
+        console.log('toggleCrossfilter Pressed', _row, event)
+      }
+      else if (event.altKey) {
+        console.log('Alt key was pressed, setup CrossFilter')
+      }
+      else {
+        console.log('Crossfilters Not Enabled') 
+      }
+      return
     }
 
     // Update the display for a given node
     function update(source: any) {
+      // ****************  DEBUG  *******************
+      tracker = tracker  + 1
+      console.log('Update Tracker Count: ', tracker)
+
       // Assigns the x and y position for the nodes
-      const treeData = treelayout(rootNode)
+      const treeData = treelayout(masterNode)
 
       // Compute the new tree layout.
       const nodes = treeData.descendants()
@@ -189,9 +240,23 @@ const vis: CollapsibleTreeVisualization = {
 
       // Normalize for fixed-depth.
       nodes.forEach((d) => {
-        d.y = d.depth * 90
-        // d.x = d.depth * 180
+        d.y = d.depth * rectdist
       })
+
+      //tooltip
+      var tooltip = d3.select('body')
+        .append('div')
+        .style('position', 'absolute')
+        .style('z-index', '10')
+        .style('visibility', 'hidden')
+        .style('background', 'gray')
+        .style('opacity', .8)
+        .style('height', rectH + 'px')
+        .style('width', rectW + 'px')
+        .style('font-family', "'Open Sans', Helvetica, sans-serif")
+        .style('font-size', textSize + 'px')
+        .text('a simple tooltip')
+
 
       // ****************** Nodes section ***************************
 
@@ -204,55 +269,59 @@ const vis: CollapsibleTreeVisualization = {
         .append('g')
         .attr('class', 'node')
         .attr('transform', (d: any) => {
-          return 'translate(' + (source.x0 + rectW/2) + ',' + source.y0 + ')'
-          // return 'translate(' + source.y0 + ',' + source.x0 + ')'
+          return 'translate(' + (source.x0) + ',' + source.y0 + ')'
         })
-
-      // Add Circle for the nodes
-      // nodeEnter.append('circle').attr('class', 'node').attr('r', 1e-6).on('click', click)
       
       // [WIP] Adding a Rectangle
       nodeEnter
           .append('rect')
+          .attr('class', 'node')
           .attr('width', rectW)
           .attr('height', rectH)
           .attr('stroke', 'black')
-          .attr('stroke-width', 1)
-          .on('click', click)
-          // .addEventListener('click', click)
+          .on('click', (event:any, d:any) => {
+            click(d)
+          })
           .style('cursor', 'pointer')
           .style('fill',  (d: any) => {
             return d._children ? nodeColors.children : nodeColors.empty;
-          });
+          })
+          .on('mouseover', (event:any, d:any )=>{
+            tooltip.text(d.data.name)
+            return tooltip.style('visibility', 'visible')
+          })
+          .on('mousemove', (event:any, d:any )=>{
+            return tooltip.style('top', (event.pageY-10)+'px').style('left', (event.pageX+10)+'px')
+          })
+          .on('mouseout', (event:any, d:any )=>{
+            return tooltip.style('visibility', 'hidden')
+          })
 
       // Add labels for the nodes
       nodeEnter
         .append('text')
+        .attr('class', 'node-text')
         .attr('dy', '.35em')
         .attr('text-anchor', 'middle')
         .attr('y', rectH / 2)
         .attr('x', rectW / 2)
-        // .attr('x', (d: any) => {
-        //   return d.children || d._children ? -textSize : textSize
-        // })
-        // .attr('text-anchor', (d: any) => {
-        //   return d.children || d._children ? 'end' : 'start'
-        // })
+        .attr('text-color', 'gray')
         .style('cursor', 'pointer')
         .style('font-family', "'Open Sans', Helvetica, sans-serif")
         .style('font-size', textSize + 'px')
         .text((d: any) => {
           return d.data.name
         })
-        // .addEventListener('click', (d: any) => {
-        //   const event: object = { pageX: d.x, pageY: d.y }
-        //   LookerCharts.Utils.openDrillMenu({
-        //     links: linkMap.get(d.data.name),
-        //     event: event,
-        //   })
+        // .on('click', (event: any, d: any) => {
+        //   const vizDimensions = queryResponse.fields.dimension_like
+        //   console.log('Log vizDimensions', vizDimensions[d.data.depth-1].name)
+        //   let _row = {[vizDimensions[d.data.depth-1].name]: { value: [d.data.name]}}
+        //   console.log('Echo _row: ', _row)
+        //   return layerdrill(event, d, _row)
+          
         // })
+    
         
-
       // UPDATE
       const nodeUpdate = nodeEnter.merge(node)
 
@@ -262,18 +331,32 @@ const vis: CollapsibleTreeVisualization = {
         .duration(duration)
         .attr('transform', (d: any) => {
           return 'translate(' + d.x + ',' + d.y + ')'
-          // return 'translate(' + d.y + ',' + d.x + ')'
         })
 
       // Update the node attributes and style
       nodeUpdate
         .select('rect.node')
-        // .attr('r', nodeRadius)
         .style('fill', (d: any) => (d._children ? nodeColors.children : nodeColors.empty))
-        .style('stroke', nodeColors.children)
+        .style('stroke', 'black')
         .style('stroke-width', 1.5)
         .attr('cursor', 'pointer')
-
+        // console.log('NodeUpdate Step Rect')
+      
+      nodeUpdate
+        .select('text.node-text')
+        .on('click', (event: any, d: any) => {
+          const localevent: object = { pageX: event.pageX, pageY: event.pageY }
+          const vizDimensions = queryResponse.fields.dimension_like
+          let _row = {[vizDimensions[d.data.depth-1].name]: { value: [d.data.name]}}
+          console.log('DEBUG Before Layerdrill, d, event, details', d, event, localevent, details)
+          layerdrill(localevent, d, _row)
+          console.log('DEBUG After Layerdrill, d, event, details', d, event, localevent, details)
+          event.stopPropagation()
+          console.log('Stop Event Propagation', event, details)
+          update(d)
+          console.log('After update(d)')
+        })
+      console.log('DEBUG Exit NodeUpdate')
       // Remove any exiting nodes
       const nodeExit = node
         .exit()
@@ -281,16 +364,16 @@ const vis: CollapsibleTreeVisualization = {
         .duration(duration)
         .attr('transform', (d: any) => {
           return 'translate(' + source.x + ',' + source.y + ')'
-          // return 'translate(' + source.y + ',' + source.x + ')'
         })
         .remove()
-
+      
+      console.log('DEBUG After nodeExit Declare')
       // On exit reduce the node circles size to 0
-      // nodeExit.select('circle').attr('r', 1e-6)
-
+      nodeExit.select('rect').remove()
+      console.log('DEBUG After nodeExit Rect Removal')
       // On exit reduce the opacity of text labels
       nodeExit.select('text').style('fill-opacity', 1e-6)
-
+      
       // ****************** links section ***************************
 
       // Update the links...
@@ -311,7 +394,7 @@ const vis: CollapsibleTreeVisualization = {
 
       // UPDATE
       const linkUpdate = linkEnter.merge(link)
-
+      console.log('LinkUpdate Step')
       // Transition back to the parent element position
       linkUpdate
         .transition()
@@ -334,14 +417,29 @@ const vis: CollapsibleTreeVisualization = {
         d.x0 = d.x
         d.y0 = d.y
       })
+
+      console.log('Reached end of inner update function', tracker)
+      console.log('rootNode:', rootNode)
+      console.log('MasterNode:', masterNode)
+      
+      // return
+      done()
     }
 
     // Collapse after the second level
-    rootNode.children.forEach(collapse)
+    if (masterNode ===  'undefined') {
+      rootNode.children.forEach(collapse)
+      console.log('Collapsing all children')
 
-    // Update the root node
-    update(rootNode)
-  },
+      // Update the root node
+      update(rootNode)
+      console.log('Updated using RootNode')
+    }
+    else {
+      update(masterNode)
+    }
+    done()
+  }
 }
 
 looker.plugins.visualizations.add(vis)
