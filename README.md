@@ -86,6 +86,22 @@ As of May 2023, this visualization still has some buggy functionality that haven
 
     Webpack dev server will automatically detect changes and recompile js into the /dist folder
 
+#### Quickstart Implementation Instructions
+
+1. **Create the js file to upload to the LookML Model**
+
+    ```
+    yarn build
+    ```
+
+2. **Create / Update the manifest.lkml file**
+
+    Use either the existing manifest file on this repo, or update the manifest file in the LookML Model. Note that you will need to update the file path/name of the js file created in #1
+    
+3. **Upload the js file to LookML Model**
+
+This can be done in several ways, please follow the instructions from the [Looker Documentation](https://cloud.google.com/looker/docs/reference/param-manifest-visualization)
+
 **`org_tree.js`**: This visualization's minified distribution file.
 
 **`manifest.lkml`**: Looker's external dependencies configuration file. The visualization object is defined here. Note that this depends on the .js file to be imported as a file in the LookML Model
