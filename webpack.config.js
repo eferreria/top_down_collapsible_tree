@@ -5,10 +5,10 @@ const UglifyJSPlugin = require('uglifyjs-webpack-plugin')
 var webpackConfig = {
   mode: 'development',
   entry: {
-    collapsible_tree: './src/collapsible_tree.ts',
+    org_chart: './src/org_chart.ts',
   },
   output: {
-    filename: 'custom_[name]_WIP.js',
+    filename: '[name].js',
     path: path.join(__dirname, 'dist'),
   },
   devServer: {

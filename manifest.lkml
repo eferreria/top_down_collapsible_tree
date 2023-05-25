@@ -1,17 +1,17 @@
-project_name: "viz-collapsible_tree-marketplace"
+
 
 constant: VIS_LABEL {
-  value: "Collapsible Tree"
+  value: "Org Chart"
   export: override_optional
 }
 
 constant: VIS_ID {
-  value: "collapsible_tree-marketplace"
+  value: "org-chart"
   export:  override_optional
 }
 
 visualization: {
   id: "@{VIS_ID}"
-  url: "https://marketplace-api.looker.com/viz-dist/collapsible_tree.js"
+  file: "org_chart.js"
   label: "@{VIS_LABEL}"
 }
