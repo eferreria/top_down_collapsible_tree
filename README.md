@@ -21,6 +21,7 @@ The collapsible tree map is best utilized for cases where the user wants to map 
 All subnodes will be collapsed by default and can be expanded by clicking.
 
 **Looker Visualization: CrossFilters**
+
 The specific goal of this custom visualization are:
 <ul>
     <li> Top Down Tree </li>
@@ -28,9 +29,11 @@ The specific goal of this custom visualization are:
 </ul>
 
 **Top Down Tree**
+
 In order to flip the original collapsible tree, the transform d3 functions will need to have its arguments flipped (x->y, y->x). The event handlers have changed in d3v6 and this needed to be updated in the code.
 
 **CrossFilter Feature**
+
 In order to enable crossfilter functionality, the custom visualization needs to check the values sent to the custom viz via the "details". Sending the "details" to the console, will allow you to review and develop the correct functionality for the crossfilters. Note that this will be different depending on how you are shaping the data in the viz.
 
 For this particular viz, we have added the following lines of code in the type.ts
@@ -55,6 +58,7 @@ export interface VisUpdateDetails {
 ```
 
 **What's Next and Developer Notes**
+
 As of May 2023, this visualization still has some buggy functionality that haven't been addressed (it wasn't the focus). Please be aware if you will use this that these issues still exist
 * Tooltip can stay active/visible when clicking on a rect object
 * DrillMenu is not enabled - you can add the LookerChart.Utils.OpenDrillMenu on the click handler, but this wasn't implement due to the next issue
