@@ -1,3 +1,7 @@
+```
+Copyright 2023 Google. This software is provided as-is, without warranty or representation for any use or purpose. 
+Your use of it is subject to your agreement with Google.  
+```
 # Top Down Collapsible Tree - Org Chart
 
 This diagram displays a [treemap](https://en.wikipedia.org/wiki/Tree_structure), showing a hierarchy of a series of dimensions. This custom visualization is based on the [Collapsible Tree Custom Visualization](https://github.com/looker-open-source/custom_visualizations_v2/tree/master/src/examples/collapsible_tree)
